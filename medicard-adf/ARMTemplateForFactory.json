@@ -1,0 +1,506 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "medicard-adf"
+		},
+		"sqldb_mart_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'sqldb_mart'"
+		},
+		"sqldb_stage_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'sqldb_stage'"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pipeline1')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT TOP 10 *\r\nFROM STG_HOSPITAL",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "AzureSqlSink",
+								"writeBehavior": "insert",
+								"sqlWriterUseTableLock": false,
+								"tableOption": "autoCreate",
+								"disableMetricsCollection": false
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "dssql_stage",
+								"type": "DatasetReference",
+								"parameters": {
+									"schemaName": "dbo",
+									"tableName": "STG_HOSPITAL"
+								}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "dssql_mart",
+								"type": "DatasetReference",
+								"parameters": {
+									"schemaName": "dbo",
+									"tableName": "TEST_DIM_HOSPITAL"
+								}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/dssql_stage')]",
+				"[concat(variables('factoryId'), '/datasets/dssql_mart')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/dssql_mart')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "sqldb_mart",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"schemaName": {
+						"type": "string"
+					},
+					"tableName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schemaName",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/sqldb_mart')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/dssql_stage')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "sqldb_stage",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"schemaName": {
+						"type": "string"
+					},
+					"tableName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "DIM_HOSPITAL_KEY",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "SEQ_NUM",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "HOSPITAL_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "HOSPITAL_NAME",
+						"type": "varchar"
+					},
+					{
+						"name": "HOSPITAL_ABBRE",
+						"type": "varchar"
+					},
+					{
+						"name": "STREET",
+						"type": "varchar"
+					},
+					{
+						"name": "CITY_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "PHONE_NO",
+						"type": "varchar"
+					},
+					{
+						"name": "PROVINCE_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "CLASS",
+						"type": "varchar"
+					},
+					{
+						"name": "GP",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "CATEGORY",
+						"type": "varchar"
+					},
+					{
+						"name": "DISCOUNT",
+						"type": "varchar"
+					},
+					{
+						"name": "REGION_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "ENTRY_TYPE",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "ISACCREDITED",
+						"type": "varchar"
+					},
+					{
+						"name": "COORDINATOR",
+						"type": "varchar"
+					},
+					{
+						"name": "COORDINATOR2",
+						"type": "varchar"
+					},
+					{
+						"name": "COORDINATOR3",
+						"type": "varchar"
+					},
+					{
+						"name": "REMARKS",
+						"type": "varchar"
+					},
+					{
+						"name": "SPECIAL_REM",
+						"type": "varchar"
+					},
+					{
+						"name": "FAXNO",
+						"type": "varchar"
+					},
+					{
+						"name": "OLD_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "TAG",
+						"type": "varchar"
+					},
+					{
+						"name": "EFF_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "EFF_DATE_RA",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "IP_PAY_DOC",
+						"type": "bit"
+					},
+					{
+						"name": "ER_PAY_DOC",
+						"type": "bit"
+					},
+					{
+						"name": "EFF_DATE_NAP",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "LOCATION",
+						"type": "varchar"
+					},
+					{
+						"name": "CLINIC",
+						"type": "bit"
+					},
+					{
+						"name": "KEYWORD",
+						"type": "varchar"
+					},
+					{
+						"name": "ALIAS",
+						"type": "varchar"
+					},
+					{
+						"name": "DOC_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "CONTACT_PERSON",
+						"type": "varchar"
+					},
+					{
+						"name": "INCREMENTAL_TAG",
+						"type": "varchar"
+					},
+					{
+						"name": "INCREMENTAL_REMARKS",
+						"type": "varchar"
+					},
+					{
+						"name": "VENDORID",
+						"type": "varchar"
+					},
+					{
+						"name": "TypeID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "OP_ASSIGNED",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "TAXABLE",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "ROOM_BOARD",
+						"type": "varchar"
+					},
+					{
+						"name": "PACKAGES",
+						"type": "varchar"
+					},
+					{
+						"name": "DIRECT_LINE",
+						"type": "varchar"
+					},
+					{
+						"name": "CREATED_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CREATED_BY",
+						"type": "varchar"
+					},
+					{
+						"name": "UPDATED_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "UPDATED_BY",
+						"type": "varchar"
+					},
+					{
+						"name": "CRED_PHICC",
+						"type": "bit"
+					},
+					{
+						"name": "PHIC_VAL",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_LICENSE",
+						"type": "bit"
+					},
+					{
+						"name": "LICENSE_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_DOH",
+						"type": "bit"
+					},
+					{
+						"name": "DOH_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_PHAC",
+						"type": "bit"
+					},
+					{
+						"name": "PHAC_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_BUSINESS_PERMIT",
+						"type": "bit"
+					},
+					{
+						"name": "BUSINESS_PERMIT_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_BIR",
+						"type": "bit"
+					},
+					{
+						"name": "BIR_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_TAXCERTIFICATE",
+						"type": "bit"
+					},
+					{
+						"name": "TAXCERTIFICATE_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_XRAY_DRUG",
+						"type": "bit"
+					},
+					{
+						"name": "XRAY_DRUG_DATE",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "CRED_OTHERS",
+						"type": "bit"
+					},
+					{
+						"name": "CRED_OTHERS_DETAILS",
+						"type": "varchar"
+					},
+					{
+						"name": "TIN_NO",
+						"type": "varchar"
+					},
+					{
+						"name": "OLD_HOSPITAL_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "OLD_DOC_CODE",
+						"type": "varchar"
+					},
+					{
+						"name": "START_EFF_DT",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "END_EFF_DT",
+						"type": "datetime2",
+						"scale": 7
+					},
+					{
+						"name": "LOAD_DT",
+						"type": "datetime2",
+						"scale": 7
+					}
+				],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().schemaName",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/sqldb_stage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/sqldb_mart')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('sqldb_mart_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/sqldb_stage')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('sqldb_stage_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
